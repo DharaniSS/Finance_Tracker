@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#10243a">
+  <title>Sign in | SpendWise</title>
+  <link rel="stylesheet" href="../static/css/style.css">
+  <script defer src="../static/js/app.js"></script>
+</head>
+<body class="auth-page" data-page="login">
+  <main class="auth-layout">
+    <section class="auth-aside" aria-label="SpendWise introduction">
+      <a class="brand brand-light" href="login.html"><span class="brand-mark" aria-hidden="true">S</span><span>spendwise<span class="brand-period">.</span></span></a>
+      <div class="auth-aside-copy">
+        <span class="eyebrow">A clearer view of your money</span>
+        <h1>Spend with<br>more intention.</h1>
+        <p>Bring your everyday expenses into focus, spot unusual patterns, and keep your monthly plans on track.</p>
+      </div>
+      <p class="aside-footnote">A personal finance project demo</p>
+    </section>
+    <section class="auth-main">
+      <div class="auth-card">
+        <div class="auth-mobile-brand"><a class="brand" href="login.html"><span class="brand-mark" aria-hidden="true">S</span><span>spendwise<span class="brand-period">.</span></span></a></div>
+        <span class="eyebrow">WELCOME BACK</span>
+        <h2>Sign in to your account</h2>
+        <p class="muted auth-intro">Use any valid email and password to enter the frontend demo.</p>
+        <div class="notice notice-info" role="note"><strong>Frontend demo</strong><span>Authentication is not connected. No credentials are stored or verified.</span></div>
+        <form id="login-form" class="form-stack" novalidate>
+          <label for="login-email">Email address</label>
+          <input id="login-email" name="email" type="email" autocomplete="email" placeholder="you@example.com" required>
+          <div class="field-heading"><label for="login-password">Password</label></div>
+          <div class="password-wrap"><input id="login-password" name="password" type="password" autocomplete="current-password" placeholder="Enter your password" required minlength="6"><button class="visibility-toggle" type="button" data-toggle-password="login-password" aria-label="Show password">Show</button></div>
+          <p class="form-error" id="login-error" role="alert" aria-live="polite"></p>
+          <button class="button button-primary button-wide" type="submit">Enter demo <span aria-hidden="true">→</span></button>
+        </form>
+        <p class="auth-switch">New to SpendWise? <a href="register.html">Create an account</a></p>
+        <p class="auth-legal">Demo only · Data stays in this browser</p>
+      </div>
+    </section>
+  </main>
+</body>
+</html>
