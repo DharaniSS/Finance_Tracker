@@ -17,25 +17,26 @@
         <h1>Spend with<br>more intention.</h1>
         <p>Bring your everyday expenses into focus, spot unusual patterns, and keep your monthly plans on track.</p>
       </div>
-      <p class="aside-footnote">A personal finance project demo</p>
+      <p class="aside-footnote">Personal account access</p>
     </section>
     <section class="auth-main">
       <div class="auth-card">
         <div class="auth-mobile-brand"><a class="brand" href="login.html"><span class="brand-mark" aria-hidden="true">S</span><span>spendwise<span class="brand-period">.</span></span></a></div>
         <span class="eyebrow">WELCOME BACK</span>
         <h2>Sign in to your account</h2>
-        <p class="muted auth-intro">Use any valid email and password to enter the frontend demo.</p>
-        <div class="notice notice-info" role="note"><strong>Frontend demo</strong><span>Authentication is not connected. No credentials are stored or verified.</span></div>
-        <form id="login-form" class="form-stack" novalidate>
+        <p class="muted auth-intro">Sign in to access your SpendWise account.</p>
+        {% with messages = get_flashed_messages() %}{% if messages %}<div class="notice notice-info" role="status">{% for message in messages %}<span>{{ message }}</span>{% endfor %}</div>{% endif %}{% endwith %}
+        <form id="login-form" class="form-stack" method="post" action="{{ url_for('login') }}" novalidate>
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <label for="login-email">Email address</label>
           <input id="login-email" name="email" type="email" autocomplete="email" placeholder="you@example.com" required>
           <div class="field-heading"><label for="login-password">Password</label></div>
-          <div class="password-wrap"><input id="login-password" name="password" type="password" autocomplete="current-password" placeholder="Enter your password" required minlength="6"><button class="visibility-toggle" type="button" data-toggle-password="login-password" aria-label="Show password">Show</button></div>
-          <p class="form-error" id="login-error" role="alert" aria-live="polite"></p>
-          <button class="button button-primary button-wide" type="submit">Enter demo <span aria-hidden="true">→</span></button>
+          <div class="password-wrap"><input id="login-password" name="password" type="password" autocomplete="current-password" placeholder="Enter your password" required maxlength="128"><button class="visibility-toggle" type="button" data-toggle-password="login-password" aria-label="Show password">Show</button></div>
+          <p class="form-error" id="login-error" role="alert" aria-live="polite">{{ error or '' }}</p>
+          <button class="button button-primary button-wide" type="submit">Sign in <span aria-hidden="true">→</span></button>
         </form>
         <p class="auth-switch">New to SpendWise? <a href="register.html">Create an account</a></p>
-        <p class="auth-legal">Demo only · Data stays in this browser</p>
+        <p class="auth-legal">Sessions expire when you close this browser or after 30 minutes</p>
       </div>
     </section>
   </main>

@@ -1,10 +1,9 @@
 (function () {
   'use strict';
 
-  const STORAGE_KEY = 'spendwise-demo-v1';
   const CURRENCY = 'INR';
-  const DEFAULT_THRESHOLD = 0.8;
-  const palette = ['#3478c8', '#36a58a', '#e2a23a', '#d66c61', '#8667b5', '#4c9ba8', '#768493'];
+  const state = { categories: [] };
+  let selectedBudgetMonth;
 
   const dateOffset = (days) => {
     const date = new Date();
@@ -12,77 +11,17 @@
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
   };
 
-  function createSeed() {
-    const categories = [
-      ['Food', 420, '#e2a23a'], ['Transport', 180, '#3478c8'], ['Education', 260, '#8667b5'],
-      ['Shopping', 240, '#d66c61'], ['Medical', 140, '#36a58a'], ['Travel', 350, '#4c9ba8'],
-      ['Subscriptions', 75, '#768493']
-    ].map(([name, budget, color], index) => ({ id: `cat-${index + 1}`, name, budget, color, archived: false }));
-    const find = (name) => categories.find((category) => category.name === name).id;
-    const rows = [
-      [0, 'Northside Market', 48.62, 'Food', 'Weekly groceries'], [1, 'Metro Transit', 14.5, 'Transport', 'Bus pass'],
-      [2, 'Campus Books', 76.9, 'Education', 'Course reader'], [3, 'Pine Street Cafe', 18.75, 'Food', 'Lunch with class'],
-      [4, 'Streamline', 12.99, 'Subscriptions', 'Monthly plan'], [6, 'City Pharmacy', 23.4, 'Medical', 'Essentials'],
-      [8, 'Oak & Thread', 92.3, 'Shopping', 'Everyday shoes'], [10, 'Northside Market', 36.18, 'Food', 'Groceries'],
-      [12, 'Metro Transit', 14.5, 'Transport', 'Bus pass'], [15, 'Field Notes Supply', 33.6, 'Education', 'Studio materials'],
-      [18, 'Pine Street Cafe', 21.25, 'Food', 'Coffee and lunch'], [22, 'Cloud Storage', 3.99, 'Subscriptions', 'Monthly plan'],
-      [27, 'Northside Market', 57.42, 'Food', 'Weekly groceries'], [-34, 'Harbor Books', 42.8, 'Education', 'Reference book'],
-      [-42, 'Metro Transit', 14.5, 'Transport', 'Transit card'], [-50, 'Juniper Kitchen', 67.24, 'Food', 'Groceries'],
-      [-64, 'Trailbound', 184.99, 'Travel', 'Weekend rail ticket'], [-72, 'Streamline', 12.99, 'Subscriptions', 'Monthly plan'],
-      [-81, 'Pine Street Cafe', 16.4, 'Food', 'Lunch'], [-94, 'Northside Market', 44.7, 'Food', 'Groceries'],
-      [-102, 'Metro Transit', 14.5, 'Transport', 'Bus pass'], [-116, 'Studio Supply Co.', 112.5, 'Education', 'Project materials'],
-      [-128, 'WellSpring Clinic', 48, 'Medical', 'Co-pay'], [-139, 'Northside Market', 61.3, 'Food', 'Groceries'],
-      [-151, 'Pine Street Cafe', 20.1, 'Food', 'Lunch'], [-163, 'Streamline', 12.99, 'Subscriptions', 'Monthly plan'],
-      [-176, 'Cedar Outfitters', 136.5, 'Shopping', 'Rain jacket'], [-189, 'Metro Transit', 14.5, 'Transport', 'Transit card'],
-      [-201, 'Northside Market', 52.75, 'Food', 'Groceries'], [-214, 'Lakeview Lodge', 248, 'Travel', 'Overnight stay'],
-      [-228, 'Pine Street Cafe', 17.2, 'Food', 'Lunch'], [-241, 'Campus Books', 64.95, 'Education', 'Textbook'],
-      [-253, 'Northside Market', 39.2, 'Food', 'Groceries'], [-266, 'Metro Transit', 14.5, 'Transport', 'Transit card'],
-      [-279, 'Streamline', 12.99, 'Subscriptions', 'Monthly plan'], [-292, 'Juniper Kitchen', 72.18, 'Food', 'Groceries'],
-      [-305, 'Pine Street Cafe', 19.6, 'Food', 'Lunch'], [-319, 'City Pharmacy', 31.25, 'Medical', 'First aid supplies'],
-      [-333, 'Northside Market', 48.4, 'Food', 'Groceries'], [-347, 'Metro Transit', 14.5, 'Transport', 'Bus pass'],
-      [-361, 'Greenline Rail', 198, 'Travel', 'Intercity ticket'], [-374, 'Streamline', 12.99, 'Subscriptions', 'Monthly plan'],
-      [-389, 'Pine Street Cafe', 15.8, 'Food', 'Lunch']
-    ];
-    const transactions = rows.map(([offset, merchant, amount, category, description], index) => ({
-      id: `txn-seed-${index + 1}`, date: dateOffset(offset), merchant, amount,
-      categoryId: find(category), description,
-      anomaly: index === 6 ? { label: 'Unusual merchant', reason: 'This merchant is uncommon in the demo history.' } :
-        index === 16 ? { label: 'Unusual amount', reason: 'This expense is higher than the typical amount in this category.' } : null
-    }));
-    return { categories, transactions, warningThreshold: DEFAULT_THRESHOLD };
-  }
-
-  const DemoStore = {
-    load() {
-      try {
-        const stored = JSON.parse(localStorage.getItem(STORAGE_KEY));
-        if (stored && Array.isArray(stored.categories) && Array.isArray(stored.transactions)) {
-          stored.warningThreshold = Number(stored.warningThreshold) || DEFAULT_THRESHOLD;
-          return stored;
-        }
-      } catch (error) {
-        console.warn('SpendWise demo data could not be read; starting with sample data.', error);
-      }
-      const initial = createSeed();
-      this.save(initial);
-      return initial;
-    },
-    save(data) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-    }
-  };
-
-  let state = DemoStore.load();
   const page = document.body.dataset.page;
   const money = (amount) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: CURRENCY, maximumFractionDigits: 2 }).format(Number(amount) || 0);
   const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
   const categoryFor = (id) => state.categories.find((category) => category.id === id);
-  const activeCategories = () => state.categories.filter((category) => !category.archived);
+  const activeCategories = () => state.categories.filter((category) => !category.is_archived);
   const monthKey = (date) => String(date).slice(0, 7);
   const currentMonth = () => {
     const date = new Date();
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
   };
+  selectedBudgetMonth = currentMonth();
 
   function toast(message, type = 'success') {
     const region = document.getElementById('toast-region');
@@ -95,34 +34,35 @@
     window.setTimeout(() => item.remove(), 4200);
   }
 
-  function totalsByCategory(month) {
-    return state.transactions.filter((transaction) => monthKey(transaction.date) === month).reduce((totals, transaction) => {
-      totals[transaction.categoryId] = (totals[transaction.categoryId] || 0) + Number(transaction.amount);
-      return totals;
-    }, {});
+  function csrfToken() {
+    return document.querySelector('.logout-form input[name="csrf_token"]')?.value || '';
   }
 
-  function crossings(before, after) {
-    const crossed = [];
-    activeCategories().forEach((category) => {
-      const limit = Number(category.budget) || 0;
-      if (!limit) return;
-      const oldAmount = before[category.id] || 0;
-      const newAmount = after[category.id] || 0;
-      const threshold = limit * state.warningThreshold;
-      if (oldAmount < threshold && newAmount >= threshold) crossed.push(`${category.name} reached ${Math.round(state.warningThreshold * 100)}% of its budget`);
-      if (oldAmount < limit && newAmount >= limit) crossed.push(`${category.name} is over its monthly budget`);
-    });
-    return [...new Set(crossed)];
+  async function apiRequest(url, options = {}) {
+    const headers = new Headers(options.headers || {});
+    headers.set('Accept', 'application/json');
+    if (options.body && !(options.body instanceof FormData)) headers.set('Content-Type', 'application/json');
+    if (options.method && options.method !== 'GET') headers.set('X-CSRFToken', csrfToken());
+    const response = await fetch(url, { ...options, headers, credentials: 'same-origin' });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      const error = new Error(payload.error?.message || 'The request could not be completed.');
+      error.fields = payload.error?.fields || {};
+      if (response.status === 401) window.location.assign('/login.html');
+      throw error;
+    }
+    return payload.data;
   }
 
-  function reportCrossings(before, month = currentMonth()) {
-    const messages = crossings(before, totalsByCategory(month));
-    if (messages.length) toast(messages.join(' · '), 'warning');
+  async function fetchApiCategories() {
+    return apiRequest('/api/categories');
   }
 
-  function saveState() {
-    DemoStore.save(state);
+  function apiCategoryOptions(select, categories, includeUncategorized = false) {
+    if (!select) return;
+    const options = categories.map((category) => ({ value: category.id, label: category.name }));
+    if (includeUncategorized) options.unshift({ value: '', label: 'Uncategorized' });
+    setSelectOptions(select, options, select.value);
   }
 
   function bindAuth() {
@@ -135,23 +75,6 @@
         button.setAttribute('aria-label', `${visible ? 'Hide' : 'Show'} password`);
       });
     });
-    const login = document.getElementById('login-form');
-    if (login) login.addEventListener('submit', (event) => {
-      event.preventDefault();
-      const email = login.elements.email.value.trim();
-      const password = login.elements.password.value;
-      const error = document.getElementById('login-error');
-      error.textContent = !email || !password ? 'Enter both your email and password.' : !login.elements.email.validity.valid ? 'Enter a valid email address.' : password.length < 6 ? 'Use at least 6 characters for this demo password.' : '';
-      if (!error.textContent) window.location.href = 'dashboard.html';
-    });
-    const register = document.getElementById('register-form');
-    if (register) register.addEventListener('submit', (event) => {
-      event.preventDefault();
-      const form = register.elements;
-      const error = document.getElementById('register-error');
-      error.textContent = !form.name.value.trim() || !form.email.value.trim() || !form.password.value || !form.confirm.value ? 'Complete every field to continue.' : !register.elements.email.validity.valid ? 'Enter a valid email address.' : form.password.value.length < 6 ? 'Use at least 6 characters for the demo password.' : form.password.value !== form.confirm.value ? 'Your passwords do not match.' : '';
-      if (!error.textContent) window.location.href = 'dashboard.html';
-    });
   }
 
   function bindShell() {
@@ -159,9 +82,6 @@
       const sidebar = document.getElementById('sidebar');
       const open = sidebar.classList.toggle('sidebar-open');
       button.setAttribute('aria-expanded', String(open));
-    }));
-    document.querySelectorAll('[data-logout]').forEach((link) => link.addEventListener('click', () => {
-      // The demo has no session to revoke; the link returns to the login screen.
     }));
   }
 
@@ -171,109 +91,147 @@
     if (selected !== undefined) select.value = selected;
   }
 
-  function monthParts(value) {
-    const [year, month] = value.split('-').map(Number);
-    return { year, month: month - 1 };
-  }
-
-  function renderDashboard() {
-    if (page !== 'dashboard') return;
-    const monthFilter = document.getElementById('month-filter');
-    const yearFilter = document.getElementById('year-filter');
-    const selectedMonth = monthFilter.value || currentMonth();
-    const [selectedYear, selectedMonthNum] = selectedMonth.split('-');
-    const entries = state.transactions.filter((transaction) => monthKey(transaction.date) === selectedMonth);
-    const total = entries.reduce((sum, transaction) => sum + Number(transaction.amount), 0);
-    const categoryTotals = totalsByCategory(selectedMonth);
-    const active = activeCategories();
-    const budget = active.reduce((sum, category) => sum + Number(category.budget || 0), 0);
-    const warnings = active.filter((category) => category.budget > 0 && (categoryTotals[category.id] || 0) >= category.budget * state.warningThreshold).length;
-    const anomalies = entries.filter((transaction) => transaction.anomaly);
-    document.getElementById('summary-spent').textContent = money(total);
-    const remaining = active.reduce((sum, category) => sum + Math.max(0, Number(category.budget || 0) - (categoryTotals[category.id] || 0)), 0);
-    document.getElementById('summary-remaining').textContent = money(remaining);
-    document.getElementById('summary-count').textContent = entries.length;
-    document.getElementById('summary-warning-count').textContent = warnings;
-    document.getElementById('summary-anomaly-count').textContent = anomalies.length;
-    document.getElementById('summary-attention').textContent = warnings + anomalies.length;
-    document.getElementById('summary-period').textContent = new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric' }).format(new Date(Number(selectedYear), Number(selectedMonthNum) - 1, 1));
-    renderBudgetProgress(categoryTotals);
-    renderAnomalyList(anomalies.slice(0, 3), 'anomaly-preview');
-    const recentBody = document.getElementById('recent-transactions');
-    const recent = [...entries].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 6);
-    recentBody.innerHTML = recent.map((transaction) => {
-      const category = categoryFor(transaction.categoryId);
-      return `<tr><td><span class="merchant-cell"><i class="category-dot" style="--category-color:${category?.color || '#768493'}"></i><strong>${escapeHtml(transaction.merchant)}</strong></span></td><td>${escapeHtml(category?.name || 'Archived')}</td><td>${formatDate(transaction.date)}</td><td class="align-right amount-cell">${money(transaction.amount)}</td></tr>`;
-    }).join('');
-    const empty = document.getElementById('recent-empty');
-    empty.classList.toggle('hidden', recent.length > 0);
-    document.querySelector('.table-panel .table-wrap').classList.toggle('hidden', recent.length === 0);
-    renderCharts(selectedMonth);
-    if (yearFilter.value !== selectedYear) yearFilter.value = selectedYear;
-  }
-
   function formatDate(value) {
     const date = new Date(`${value}T12:00:00`);
     return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' }).format(date);
   }
 
-  function renderBudgetProgress(totals) {
+  function renderBudgetProgress(rows) {
     const target = document.getElementById('budget-progress');
-    const categories = activeCategories().filter((category) => Number(category.budget) > 0);
-    target.innerHTML = categories.length ? categories.map((category) => {
-      const spent = totals[category.id] || 0;
-      const percent = Math.min(100, Math.round(spent / category.budget * 100));
-      const status = spent >= category.budget ? 'over' : spent >= category.budget * state.warningThreshold ? 'warning' : '';
-      return `<div class="budget-row"><div class="budget-row-heading"><span><i class="category-dot" style="--category-color:${category.color}"></i>${escapeHtml(category.name)}</span><span><strong>${money(spent)}</strong> <small>of ${money(category.budget)}</small></span></div><div class="progress-track" role="progressbar" aria-label="${escapeHtml(category.name)} budget used" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.min(percent, 100)}"><span class="progress-fill ${status}" style="width:${percent}%;--category-color:${category.color}"></span></div><small class="budget-footnote">${Math.round(spent / category.budget * 100)}% used${spent > category.budget ? ` · ${money(spent - category.budget)} over` : ''}</small></div>`;
-    }).join('') : '<div class="empty-inline">No active budgets yet. Add a category budget to track progress.</div>';
-  }
-
-  function renderAnomalyList(transactions, targetId) {
-    const target = document.getElementById(targetId);
     if (!target) return;
-    target.innerHTML = transactions.length ? transactions.map((transaction) => {
-      const category = categoryFor(transaction.categoryId);
-      return `<div class="alert-item"><span class="alert-mark">!</span><div class="alert-copy"><strong>${escapeHtml(transaction.anomaly.label)}</strong><span>${escapeHtml(transaction.merchant)} · ${escapeHtml(category?.name || 'Archived')} · ${money(transaction.amount)}</span><small>${escapeHtml(transaction.anomaly.reason)}</small></div></div>`;
-    }).join('') : '<div class="empty-inline">No unusual activity in this month.</div>';
+    target.innerHTML = rows.length ? rows.map((item) => {
+      const spent = Number(item.spent);
+      const budget = Number(item.budget_amount);
+      const percentage = item.percentage === null ? null : Number(item.percentage);
+      const fill = percentage === null ? (spent > 0 ? 100 : 0) : Math.min(100, percentage);
+      const status = item.status === 'exceeded' ? 'over' : item.status === 'warning' ? 'warning' : '';
+      const color = /^#[\da-f]{6}$/i.test(item.category_color || '') ? item.category_color : '#768493';
+      const caption = item.status === 'unbudgeted' ? 'No budget set' : `${percentage}% used${spent > budget ? ` · ${money(spent - budget)} over` : ''}`;
+      return `<div class="budget-row"><div class="budget-row-heading"><span><i class="category-dot" style="--category-color:${color}"></i>${escapeHtml(item.category_name)}</span><span><strong>${money(spent)}</strong> <small>of ${money(budget)}</small></span></div><div class="progress-track" role="progressbar" aria-label="${escapeHtml(item.category_name)} budget used" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${fill}"><span class="progress-fill ${status}" style="width:${fill}%;--category-color:${color}"></span></div><small class="budget-footnote">${caption}</small></div>`;
+    }).join('') : '<div class="empty-inline">No categories yet. Create one to track a budget.</div>';
   }
 
-  function renderCharts(month) {
+  function renderAnomalyList(items) {
+    const target = document.getElementById('anomaly-preview');
+    if (!target) return;
+    const reviewItems = items.filter((item) => item.is_anomaly || item.status === 'insufficient_history');
+    target.innerHTML = reviewItems.length ? reviewItems.map((item) => {
+      const flagged = item.is_anomaly;
+      const action = flagged ? `<button class="button button-quiet button-small" type="button" data-ack-anomaly="${item.id}" ${item.acknowledged ? 'disabled' : ''}>${item.acknowledged ? 'Reviewed' : 'Mark reviewed'}</button>` : '';
+      const confidence = item.confidence ? ` Confidence: ${Math.round(Number(item.confidence) * 100)}%.` : '';
+      return `<div class="alert-item"><span class="alert-mark">${flagged ? '!' : '…'}</span><div class="alert-copy"><strong>${flagged ? 'Potential spending anomaly' : 'Insufficient history'}</strong><span>${escapeHtml(item.transaction.merchant)} · ${escapeHtml(item.transaction.category || 'Uncategorized')} · ${money(item.transaction.amount)}</span><small>${escapeHtml(item.explanation)}${confidence}${flagged ? ` Severity: ${escapeHtml(item.severity || 'unrated')}.` : ''}</small>${action}</div></div>`;
+    }).join('') : '<div class="empty-inline">No analysis results for this month. Run an analysis to review your history.</div>';
+  }
+
+  function renderCharts(data) {
     if (typeof Plotly === 'undefined') return;
-    const entries = state.transactions.filter((transaction) => monthKey(transaction.date) === month);
-    const { year, month: monthIndex } = monthParts(month);
-    const days = new Date(year, monthIndex + 1, 0).getDate();
-    const daily = Array(days).fill(0);
-    entries.forEach((transaction) => { daily[Number(transaction.date.slice(8, 10)) - 1] += Number(transaction.amount); });
     const common = { paper_bgcolor: 'transparent', plot_bgcolor: 'transparent', font: { family: 'DM Sans, sans-serif', color: '#c3cbd1', size: 11 }, margin: { l: 48, r: 14, t: 8, b: 32 }, xaxis: { gridcolor: 'rgba(255,255,255,.09)', zeroline: false, linecolor: 'rgba(255,255,255,.12)' }, yaxis: { gridcolor: 'rgba(255,255,255,.09)', zeroline: false, tickprefix: '₹', linecolor: 'transparent' }, showlegend: false };
-    Plotly.react('trend-chart', [{ x: daily.map((_, index) => index + 1), y: daily, type: 'scatter', mode: 'lines+markers', line: { color: '#f2b84b', width: 3, shape: 'spline' }, marker: { color: '#ffd77e', size: 5 }, fill: 'tozeroy', fillcolor: 'rgba(242,184,75,.13)', hovertemplate: 'Day %{x}<br>₹%{y:.2f}<extra></extra>' }], { ...common, xaxis: { ...common.xaxis, title: 'Day of month', dtick: Math.max(1, Math.ceil(days / 8)) }, yaxis: { ...common.yaxis, rangemode: 'tozero' } }, { responsive: true, displayModeBar: false });
-    const byCategory = state.categories.map((category) => ({ category, amount: entries.filter((transaction) => transaction.categoryId === category.id).reduce((sum, transaction) => sum + Number(transaction.amount), 0) })).filter((item) => item.amount > 0);
-    Plotly.react('category-chart', byCategory.length ? [{ labels: byCategory.map((item) => item.category.name), values: byCategory.map((item) => item.amount), type: 'pie', hole: 0.68, marker: { colors: byCategory.map((item) => item.category.color), line: { color: '#26313b', width: 3 } }, textinfo: 'none', hovertemplate: '%{label}<br>₹%{value:.2f} (%{percent})<extra></extra>' }] : [], { ...common, margin: { l: 8, r: 8, t: 4, b: 4 }, showlegend: byCategory.length > 0, legend: { orientation: 'h', y: -0.08, font: { size: 10, color: '#c3cbd1' } }, annotations: byCategory.length ? [] : [{ text: 'No spending yet', showarrow: false, font: { color: '#b6c0c8', size: 13 } }] }, { responsive: true, displayModeBar: false });
-    const months = Array.from({ length: 6 }, (_, index) => {
-      const date = new Date(year, monthIndex - 5 + index, 1);
-      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-    });
-    const monthlyTotals = months.map((key) => state.transactions.filter((transaction) => monthKey(transaction.date) === key).reduce((sum, transaction) => sum + Number(transaction.amount), 0));
-    Plotly.react('monthly-chart', [{ x: months.map((key) => new Intl.DateTimeFormat('en-US', { month: 'short' }).format(new Date(`${key}-01T12:00:00`))), y: monthlyTotals, type: 'bar', marker: { color: months.map((key) => key === month ? '#f2b84b' : 'rgba(212,225,235,.3)'), line: { color: months.map((key) => key === month ? '#f7ca70' : 'rgba(212,225,235,.24)'), width: 1 }, cornerradius: 4 }, hovertemplate: '%{x}<br>₹%{y:.2f}<extra></extra>' }], { ...common, bargap: 0.42, yaxis: { ...common.yaxis, rangemode: 'tozero' } }, { responsive: true, displayModeBar: false });
+    const daily = data.daily_spending;
+    Plotly.react('trend-chart', [{ x: daily.map((item) => item.day), y: daily.map((item) => Number(item.amount)), type: 'scatter', mode: 'lines+markers', line: { color: '#f2b84b', width: 3, shape: 'spline' }, marker: { color: '#ffd77e', size: 5 }, fill: 'tozeroy', fillcolor: 'rgba(242,184,75,.13)', hovertemplate: 'Day %{x}<br>₹%{y:.2f}<extra></extra>' }], { ...common, xaxis: { ...common.xaxis, title: 'Day of month', dtick: Math.max(1, Math.ceil(daily.length / 8)) }, yaxis: { ...common.yaxis, rangemode: 'tozero' } }, { responsive: true, displayModeBar: false });
+
+    const categories = data.category_spending;
+    Plotly.react('category-chart', categories.length ? [{ labels: categories.map((item) => item.name), values: categories.map((item) => Number(item.amount)), type: 'pie', hole: 0.68, marker: { colors: categories.map((item) => /^#[\da-f]{6}$/i.test(item.color || '') ? item.color : '#768493'), line: { color: '#26313b', width: 3 } }, textinfo: 'none', hovertemplate: '%{label}<br>₹%{value:.2f} (%{percent})<extra></extra>' }] : [], { ...common, margin: { l: 8, r: 8, t: 4, b: 4 }, showlegend: categories.length > 0, legend: { orientation: 'h', y: -0.08, font: { size: 10, color: '#c3cbd1' } }, annotations: categories.length ? [] : [{ text: 'No spending yet', showarrow: false, font: { color: '#b6c0c8', size: 13 } }] }, { responsive: true, displayModeBar: false });
+
+    const months = data.monthly_spending;
+    Plotly.react('monthly-chart', [{ x: months.map((item) => new Intl.DateTimeFormat('en-US', { month: 'short', year: '2-digit' }).format(new Date(`${item.month}-01T12:00:00`))), y: months.map((item) => Number(item.amount)), type: 'bar', marker: { color: months.map((item) => item.month === data.month ? '#f2b84b' : 'rgba(212,225,235,.3)'), line: { color: months.map((item) => item.month === data.month ? '#f7ca70' : 'rgba(212,225,235,.24)'), width: 1 }, cornerradius: 4 }, hovertemplate: '%{x}<br>₹%{y:.2f}<extra></extra>' }], { ...common, bargap: 0.42, yaxis: { ...common.yaxis, rangemode: 'tozero' } }, { responsive: true, displayModeBar: false });
+
+    const budgets = data.budget_vs_actual;
+    Plotly.react('budget-chart', budgets.length ? [{ x: budgets.map((item) => item.category_name), y: budgets.map((item) => Number(item.budget_amount)), type: 'bar', name: 'Budget', marker: { color: 'rgba(212,225,235,.3)' }, hovertemplate: '%{x}<br>Budget ₹%{y:.2f}<extra></extra>' }, { x: budgets.map((item) => item.category_name), y: budgets.map((item) => Number(item.spent)), type: 'bar', name: 'Actual', marker: { color: '#f2b84b' }, hovertemplate: '%{x}<br>Spent ₹%{y:.2f}<extra></extra>' }] : [], { ...common, barmode: 'group', yaxis: { ...common.yaxis, rangemode: 'tozero' }, showlegend: budgets.length > 0, legend: { orientation: 'h', y: 1.12, font: { size: 10, color: '#c3cbd1' } }, annotations: budgets.length ? [] : [{ text: 'No budgets for this month', showarrow: false, font: { color: '#b6c0c8', size: 13 } }] }, { responsive: true, displayModeBar: false });
+  }
+
+  async function loadDashboard(month) {
+    const status = document.getElementById('dashboard-feedback');
+    status.textContent = 'Loading dashboard…';
+    try {
+      const data = await apiRequest(`/api/dashboard?month=${encodeURIComponent(month)}`);
+      renderDashboard(data);
+      status.textContent = '';
+    } catch (error) {
+      status.textContent = error.message || 'Dashboard data could not be loaded.';
+    }
+  }
+
+  function renderDashboard(data) {
+    const summary = data.summary;
+    document.getElementById('summary-spent').textContent = money(summary.total_spent);
+    document.getElementById('summary-period').textContent = new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric' }).format(new Date(`${data.month}-01T12:00:00`));
+    document.getElementById('summary-count').textContent = summary.transaction_count;
+    document.getElementById('summary-remaining').textContent = money(summary.budget_remaining);
+    document.getElementById('summary-change').textContent = money(summary.change_amount);
+    document.getElementById('summary-change-detail').textContent = summary.change_percent === null ? 'No previous-month spending to compare' : `${summary.change_percent}% versus previous month`;
+    document.getElementById('summary-warning-count').textContent = summary.budget_warning_count;
+    document.getElementById('summary-anomaly-count').textContent = summary.anomaly_count;
+    document.getElementById('summary-attention').textContent = summary.budget_warning_count + summary.anomaly_count;
+    renderBudgetProgress(data.budget_vs_actual);
+    renderAnomalyList(data.anomalies);
+
+    const recentBody = document.getElementById('recent-transactions');
+    recentBody.innerHTML = data.recent_transactions.map((transaction) => {
+      const color = /^#[\da-f]{6}$/i.test(transaction.category?.color || '') ? transaction.category.color : '#768493';
+      return `<tr><td><span class="merchant-cell"><i class="category-dot" style="--category-color:${color}"></i><strong>${escapeHtml(transaction.merchant)}</strong></span></td><td>${escapeHtml(transaction.category?.name || 'Uncategorized')}</td><td>${formatDate(transaction.date)}</td><td class="align-right amount-cell">${money(transaction.amount)}</td></tr>`;
+    }).join('');
+    const empty = document.getElementById('recent-empty');
+    empty.classList.toggle('hidden', data.recent_transactions.length > 0);
+    document.querySelector('.table-panel .table-wrap').classList.toggle('hidden', data.recent_transactions.length === 0);
+    renderCharts(data);
   }
 
   function initDashboardFilters() {
     if (page !== 'dashboard') return;
     const month = document.getElementById('month-filter');
     const year = document.getElementById('year-filter');
-    const allMonths = new Set(state.transactions.map((transaction) => monthKey(transaction.date)));
-    allMonths.add(currentMonth());
-    const months = [...allMonths].sort().reverse();
-    setSelectOptions(month, months.map((value) => ({ value, label: new Intl.DateTimeFormat('en-US', { month: 'long' }).format(new Date(`${value}-01T12:00:00`)) })), months.includes(currentMonth()) ? currentMonth() : months[0]);
-    const years = [...new Set(months.map((value) => value.slice(0, 4)))].sort().reverse();
-    setSelectOptions(year, years.map((value) => ({ value, label: value })), month.value.slice(0, 4));
-    const applyYear = () => {
-      const options = [...month.options].filter((option) => option.value.startsWith(year.value));
-      if (!options.some((option) => option.value === month.value)) month.value = options[0]?.value || currentMonth();
-      renderDashboard();
-    };
-    month.addEventListener('change', () => { year.value = month.value.slice(0, 4); renderDashboard(); });
-    year.addEventListener('change', applyYear);
-    renderDashboard();
+    const load = () => loadDashboard(`${year.value}-${month.value}`);
+    (async () => {
+      const status = document.getElementById('dashboard-feedback');
+      status.textContent = 'Loading dashboard…';
+      try {
+        const initial = await apiRequest(`/api/dashboard?month=${currentMonth()}`);
+        const options = initial.available_months;
+        const monthOptions = Array.from({ length: 12 }, (_, index) => {
+          const value = String(index + 1).padStart(2, '0');
+          return { value, label: new Intl.DateTimeFormat('en-US', { month: 'long' }).format(new Date(`2000-${value}-01T12:00:00`)) };
+        });
+        setSelectOptions(month, monthOptions, currentMonth().slice(5));
+        const years = [...new Set(options.map((value) => value.slice(0, 4)))].reverse();
+        setSelectOptions(year, years.map((value) => ({ value, label: value })), currentMonth().slice(0, 4));
+        month.addEventListener('change', load);
+        year.addEventListener('change', load);
+        renderDashboard(initial);
+        status.textContent = '';
+
+        document.getElementById('analyze-spending').addEventListener('click', async (event) => {
+          const button = event.currentTarget;
+          const feedback = document.getElementById('anomaly-feedback');
+          button.disabled = true;
+          feedback.textContent = 'Comparing transactions with earlier category history…';
+          try {
+            await apiRequest(`/api/anomalies/analyze?month=${encodeURIComponent(`${year.value}-${month.value}`)}`, { method: 'POST' });
+            await loadDashboard(`${year.value}-${month.value}`);
+            feedback.textContent = 'Analysis complete. Indicators are suggestions to review, not fraud determinations.';
+          } catch (error) {
+            feedback.textContent = error.message;
+          } finally {
+            button.disabled = false;
+          }
+        });
+
+        document.getElementById('anomaly-preview').addEventListener('click', async (event) => {
+          const button = event.target.closest('[data-ack-anomaly]');
+          if (!button || button.disabled) return;
+          button.disabled = true;
+          try {
+            await apiRequest(`/api/anomalies/${encodeURIComponent(button.dataset.ackAnomaly)}/acknowledge`, { method: 'POST' });
+            await loadDashboard(`${year.value}-${month.value}`);
+            toast('Anomaly marked as reviewed.');
+          } catch (error) {
+            document.getElementById('anomaly-feedback').textContent = error.message;
+            button.disabled = false;
+          }
+        });
+      } catch (error) {
+        status.textContent = error.message || 'Dashboard data could not be loaded.';
+      }
+    })();
   }
 
   function updateCategoryOptions() {
@@ -289,50 +247,70 @@
     if (!form) return;
     const dateInput = document.getElementById('entry-date');
     dateInput.value = dateOffset(0);
-    updateCategoryOptions();
+    const saveButton = document.getElementById('save-transaction');
+    const error = document.getElementById('transaction-error');
+    const idInput = document.getElementById('transaction-id');
+    saveButton.disabled = true;
+    error.textContent = 'Loading your categories…';
     const params = new URLSearchParams(window.location.search);
-    if (params.has('edit')) {
-      const transaction = state.transactions.find((item) => item.id === params.get('edit'));
-      if (transaction) populateTransactionForm(transaction);
-    }
-    form.addEventListener('submit', (event) => {
+    (async () => {
+      try {
+        const categories = await fetchApiCategories();
+        apiCategoryOptions(document.getElementById('entry-category'), categories, true);
+        if (params.has('edit')) {
+          const transaction = await apiRequest(`/api/transactions/${encodeURIComponent(params.get('edit'))}`);
+          populateTransactionForm(transaction);
+        }
+        error.textContent = '';
+      } catch (requestError) {
+        error.textContent = requestError.message;
+      } finally {
+        saveButton.disabled = false;
+      }
+    })();
+    form.addEventListener('submit', async (event) => {
       event.preventDefault();
-      const id = document.getElementById('transaction-id').value;
+      const id = idInput.value;
       const merchant = document.getElementById('entry-merchant').value.trim();
-      const amount = Number(document.getElementById('entry-amount').value);
+      const amount = document.getElementById('entry-amount').value.trim();
       const categoryId = document.getElementById('entry-category').value;
       const date = dateInput.value;
-      const error = document.getElementById('transaction-error');
-      if (!date || !merchant || !categoryId || !Number.isFinite(amount) || amount <= 0) {
-        error.textContent = 'Enter a valid date, merchant, positive amount, and category.';
+      const description = document.getElementById('entry-description').value.trim();
+      if (!date || !merchant || !amount) {
+        error.textContent = 'Enter a date, merchant, and positive amount.';
         return;
       }
-      const transactionMonth = monthKey(date);
-      const before = totalsByCategory(transactionMonth);
-      const existing = state.transactions.find((item) => item.id === id);
-      const transaction = { id: id || `txn-${Date.now()}`, date, merchant, amount: Math.round(amount * 100) / 100, categoryId, description: document.getElementById('entry-description').value.trim(), anomaly: existing?.anomaly || null };
-      if (existing) state.transactions = state.transactions.map((item) => item.id === id ? transaction : item);
-      else state.transactions.push(transaction);
-      saveState();
-      renderDashboard();
+      const payload = { merchant, amount, date, description, category_id: categoryId || null };
+      const editing = Boolean(id);
+      saveButton.disabled = true;
+      saveButton.textContent = editing ? 'Saving…' : 'Adding…';
       error.textContent = '';
-      form.reset();
-      dateInput.value = dateOffset(0);
-      document.getElementById('transaction-id').value = '';
-      setEntryMode(false);
-      toast(existing ? 'Transaction updated.' : 'Transaction added.');
-      reportCrossings(before, transactionMonth);
+      try {
+        await apiRequest(editing ? `/api/transactions/${encodeURIComponent(id)}` : '/api/transactions', {
+          method: editing ? 'PATCH' : 'POST',
+          body: JSON.stringify(payload),
+        });
+        form.reset();
+        dateInput.value = dateOffset(0);
+        idInput.value = '';
+        setEntryMode(false);
+        window.location.href = editing ? 'transactions.html?updated=1' : 'transactions.html?created=1';
+      } catch (requestError) {
+        error.textContent = Object.values(requestError.fields || {}).join(' ') || requestError.message;
+      } finally {
+        saveButton.disabled = false;
+        saveButton.textContent = idInput.value ? 'Save changes' : 'Save transaction';
+      }
     });
     document.getElementById('cancel-edit').addEventListener('click', () => { form.reset(); dateInput.value = dateOffset(0); setEntryMode(false); });
   }
 
   function populateTransactionForm(transaction) {
-    updateCategoryOptions();
     document.getElementById('transaction-id').value = transaction.id;
     document.getElementById('entry-date').value = transaction.date;
     document.getElementById('entry-merchant').value = transaction.merchant;
     document.getElementById('entry-amount').value = transaction.amount;
-    document.getElementById('entry-category').value = transaction.categoryId;
+    document.getElementById('entry-category').value = transaction.category_id ?? '';
     document.getElementById('entry-description').value = transaction.description || '';
     setEntryMode(true);
     document.getElementById('manual-entry').scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -344,79 +322,53 @@
     document.getElementById('cancel-edit').classList.toggle('hidden', !editing);
   }
 
-  function parseCsvLine(line) {
-    const values = [];
-    let value = '';
-    let quoted = false;
-    for (let index = 0; index < line.length; index += 1) {
-      const char = line[index];
-      if (char === '"' && quoted && line[index + 1] === '"') { value += '"'; index += 1; }
-      else if (char === '"') quoted = !quoted;
-      else if (char === ',' && !quoted) { values.push(value.trim()); value = ''; }
-      else value += char;
-    }
-    values.push(value.trim());
-    return values;
-  }
-
-  function parseCsv(text) {
-    const lines = text.replace(/^\uFEFF/, '').split(/\r?\n/).filter((line) => line.trim());
-    if (lines.length < 2) throw new Error('The CSV needs a header row and at least one transaction row.');
-    const headers = parseCsvLine(lines[0]).map((header) => header.toLowerCase().replace(/[^a-z]/g, ''));
-    const column = (names) => headers.findIndex((header) => names.includes(header));
-    const indexes = { date: column(['date', 'transactiondate']), merchant: column(['merchant', 'name', 'payee']), amount: column(['amount', 'total', 'value']), category: column(['category', 'type']), description: column(['description', 'note', 'memo', 'details']) };
-    const missing = ['date', 'merchant', 'amount', 'category'].filter((key) => indexes[key] < 0);
-    if (missing.length) throw new Error(`Missing required column${missing.length > 1 ? 's' : ''}: ${missing.join(', ')}.`);
-    const seen = new Set(state.transactions.map((transaction) => `${transaction.date}|${transaction.merchant.toLowerCase()}|${Number(transaction.amount)}`));
-    return lines.slice(1).map((line, index) => {
-      const fields = parseCsvLine(line);
-      const rawDate = fields[indexes.date] || '';
-      const date = normalizeDate(rawDate);
-      const merchant = (fields[indexes.merchant] || '').trim();
-      const amountText = (fields[indexes.amount] || '').replace(/[$,\s]/g, '');
-      const amount = Number(amountText);
-      const categoryName = (fields[indexes.category] || '').trim();
-      const category = state.categories.find((item) => item.name.toLowerCase() === categoryName.toLowerCase() && !item.archived);
-      const problems = [];
-      if (!date) problems.push('Invalid date');
-      if (!merchant) problems.push('Merchant is required');
-      if (!Number.isFinite(amount) || amount <= 0) problems.push('Amount must be a positive number');
-      if (!categoryName) problems.push('Category is required');
-      else if (!category) problems.push(`Unknown active category: ${categoryName}`);
-      const duplicateKey = `${date}|${merchant.toLowerCase()}|${amount}`;
-      const duplicate = Boolean(date && merchant && Number.isFinite(amount) && seen.has(duplicateKey));
-      if (date && merchant && Number.isFinite(amount)) seen.add(duplicateKey);
-      return { row: index + 2, date, merchant, amount, categoryId: category?.id || '', categoryName, description: indexes.description >= 0 ? fields[indexes.description] || '' : '', problems, duplicate, valid: problems.length === 0 && !duplicate };
-    });
-  }
-
-  function normalizeDate(value) {
-    const trimmed = value.trim();
-    if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
-      const date = new Date(`${trimmed}T00:00:00Z`);
-      return !Number.isNaN(date.valueOf()) && date.toISOString().slice(0, 10) === trimmed ? trimmed : '';
-    }
-    const match = trimmed.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/);
-    if (!match) return '';
-    const candidate = `${match[3]}-${match[1].padStart(2, '0')}-${match[2].padStart(2, '0')}`;
-    const date = new Date(`${candidate}T00:00:00Z`);
-    return !Number.isNaN(date.valueOf()) && date.toISOString().slice(0, 10) === candidate ? candidate : '';
-  }
-
   function initCsvImport() {
     const input = document.getElementById('csv-file');
     if (!input) return;
     const zone = document.getElementById('csv-dropzone');
-    let preview = [];
-    const loadFile = async (file) => {
-      if (!file || !file.name.toLowerCase().endsWith('.csv')) { toast('Choose a CSV file to continue.', 'error'); return; }
+    const previewWrap = document.getElementById('csv-preview-wrap');
+    const previewButton = document.getElementById('import-valid-rows');
+    const cancelButton = document.getElementById('cancel-csv-import');
+    let previewId = null;
+
+    async function cancelPreview() {
+      if (!previewId) return;
       try {
-        preview = parseCsv(await file.text());
-        renderCsvPreview(preview);
-        document.getElementById('csv-feedback').textContent = `${file.name} ready for review.`;
+        await apiRequest(`/api/transactions/import/preview/${encodeURIComponent(previewId)}`, { method: 'DELETE' });
       } catch (error) {
-        document.getElementById('csv-preview-wrap').classList.add('hidden');
         document.getElementById('csv-feedback').textContent = error.message;
+      }
+      previewId = null;
+    }
+
+    const loadFile = async (file) => {
+      if (!file) return;
+      await cancelPreview();
+      previewWrap.classList.add('hidden');
+      if (!file.name.toLowerCase().endsWith('.csv')) {
+        document.getElementById('csv-feedback').textContent = 'Choose a .csv file to continue.';
+        return;
+      }
+      if (file.size > 1000000) {
+        document.getElementById('csv-feedback').textContent = 'The upload exceeds the 1 MB file limit.';
+        return;
+      }
+      document.getElementById('csv-feedback').textContent = 'Uploading and validating CSV…';
+      previewButton.disabled = true;
+      cancelButton.classList.add('hidden');
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+        const result = await apiRequest('/api/transactions/import/preview', { method: 'POST', body: formData });
+        previewId = result.preview_id;
+        renderCsvPreview(result.rows);
+        document.getElementById('csv-feedback').textContent = `${file.name} validated. Review the rows before importing.`;
+        cancelButton.classList.remove('hidden');
+      } catch (requestError) {
+        document.getElementById('csv-feedback').textContent = requestError.message;
+        input.value = '';
+      } finally {
+        previewButton.disabled = false;
       }
     };
     zone.addEventListener('click', () => input.click());
@@ -425,20 +377,28 @@
     ['dragenter', 'dragover'].forEach((name) => zone.addEventListener(name, (event) => { event.preventDefault(); zone.classList.add('dropzone-active'); }));
     ['dragleave', 'drop'].forEach((name) => zone.addEventListener(name, (event) => { event.preventDefault(); zone.classList.remove('dropzone-active'); }));
     zone.addEventListener('drop', (event) => loadFile(event.dataTransfer.files[0]));
-    document.getElementById('import-valid-rows').addEventListener('click', () => {
-      const validRows = preview.filter((row) => row.valid);
-      if (!validRows.length) { toast('There are no valid, non-duplicate rows to import.', 'warning'); return; }
-      const beforeByMonth = new Map();
-      validRows.forEach((row) => { const key = monthKey(row.date); if (!beforeByMonth.has(key)) beforeByMonth.set(key, totalsByCategory(key)); });
-      state.transactions.push(...validRows.map((row) => ({ id: `txn-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, date: row.date, merchant: row.merchant, amount: Math.round(row.amount * 100) / 100, categoryId: row.categoryId, description: row.description, anomaly: null })));
-      saveState();
-      renderDashboard();
-      document.getElementById('csv-feedback').textContent = `${validRows.length} transaction${validRows.length === 1 ? '' : 's'} imported.`;
-      toast(`${validRows.length} transaction${validRows.length === 1 ? '' : 's'} imported.`);
-      beforeByMonth.forEach((before, month) => reportCrossings(before, month));
-      preview = [];
-      document.getElementById('csv-preview-wrap').classList.add('hidden');
+    previewButton.addEventListener('click', async () => {
+      if (!previewId || previewButton.disabled) return;
+      previewButton.disabled = true;
+      previewButton.textContent = 'Importing…';
+      try {
+        const result = await apiRequest('/api/transactions/import/confirm', {
+          method: 'POST',
+          body: JSON.stringify({ preview_id: previewId }),
+        });
+        previewId = null;
+        window.location.href = `transactions.html?imported=${result.imported_count}`;
+      } catch (error) {
+        document.getElementById('csv-feedback').textContent = error.message;
+        previewButton.disabled = false;
+        previewButton.textContent = 'Import valid rows';
+      }
+    });
+    cancelButton.addEventListener('click', async () => {
+      await cancelPreview();
+      previewWrap.classList.add('hidden');
       input.value = '';
+      document.getElementById('csv-feedback').textContent = 'Import cancelled. No transactions were saved.';
     });
   }
 
@@ -446,11 +406,16 @@
     const wrap = document.getElementById('csv-preview-wrap');
     wrap.classList.remove('hidden');
     const valid = rows.filter((row) => row.valid).length;
-    const duplicates = rows.filter((row) => row.duplicate).length;
-    document.getElementById('csv-preview-summary').textContent = `${valid} ready · ${rows.length - valid - duplicates} with errors · ${duplicates} duplicate${duplicates === 1 ? '' : 's'}`;
-    document.getElementById('csv-errors').innerHTML = rows.filter((row) => row.problems.length || row.duplicate).map((row) => `<div class="validation-message ${row.duplicate && !row.problems.length ? 'validation-warning' : ''}"><strong>Row ${row.row}:</strong> ${escapeHtml([...row.problems, ...(row.duplicate ? ['Possible duplicate transaction'] : [])].join(' · '))}</div>`).join('');
-    document.getElementById('csv-preview-body').innerHTML = rows.map((row) => `<tr><td>${row.row}</td><td>${escapeHtml(row.date || '—')}</td><td>${escapeHtml(row.merchant || '—')}</td><td>${escapeHtml(row.categoryName || '—')}</td><td class="align-right">${Number.isFinite(row.amount) ? money(row.amount) : '—'}</td><td><span class="status-pill ${row.valid ? 'status-ready' : row.duplicate && !row.problems.length ? 'status-duplicate' : 'status-invalid'}">${row.valid ? 'Ready' : row.duplicate && !row.problems.length ? 'Duplicate' : 'Review'}</span></td></tr>`).join('');
-    document.getElementById('import-valid-rows').disabled = valid === 0;
+    const invalid = rows.length - valid;
+    document.getElementById('csv-preview-summary').textContent = `${valid} valid · ${invalid} invalid. Invalid rows will not be imported. Dates must use YYYY-MM-DD; amounts must be positive.`;
+    document.getElementById('csv-errors').innerHTML = rows.filter((row) => !row.valid).map((row) => `<div class="validation-message"><strong>Row ${row.row}:</strong> ${escapeHtml(row.errors.join(' · '))}</div>`).join('');
+    document.getElementById('csv-preview-body').innerHTML = rows.map((row) => {
+      const transaction = row.transaction;
+      return `<tr><td>${row.row}</td><td>${escapeHtml(transaction.date || '—')}</td><td>${escapeHtml(transaction.merchant || '—')}</td><td>${escapeHtml(transaction.category || '—')}</td><td class="align-right">${escapeHtml(transaction.amount || '—')}</td><td><span class="status-pill ${row.valid ? 'status-ready' : 'status-invalid'}">${row.valid ? 'Valid' : 'Invalid'}</span></td></tr>`;
+    }).join('');
+    const button = document.getElementById('import-valid-rows');
+    button.textContent = `Import ${valid} valid row${valid === 1 ? '' : 's'}`;
+    button.disabled = valid === 0;
   }
 
   function initTransactions() {
@@ -459,115 +424,239 @@
     const search = document.getElementById('transaction-search');
     const categoryFilter = document.getElementById('transaction-category-filter');
     const monthFilter = document.getElementById('transaction-month-filter');
-    setSelectOptions(categoryFilter, [{ value: '', label: 'All categories' }, ...state.categories.map((category) => ({ value: category.id, label: `${category.name}${category.archived ? ' (archived)' : ''}` }))]);
+    const feedback = document.getElementById('transactions-feedback');
+    let transactions = [];
     const render = () => {
       const query = search.value.trim().toLowerCase();
       const selectedCategory = categoryFilter.value;
       const selectedMonth = monthFilter.value;
-      const filtered = [...state.transactions].sort((a, b) => b.date.localeCompare(a.date)).filter((transaction) => {
+      const filtered = [...transactions].sort((a, b) => b.date.localeCompare(a.date)).filter((transaction) => {
         const textMatch = `${transaction.merchant} ${transaction.description || ''}`.toLowerCase().includes(query);
-        return textMatch && (!selectedCategory || transaction.categoryId === selectedCategory) && (!selectedMonth || monthKey(transaction.date) === selectedMonth);
+        return textMatch && (!selectedCategory || String(transaction.category_id) === selectedCategory) && (!selectedMonth || monthKey(transaction.date) === selectedMonth);
       });
       body.innerHTML = filtered.map((transaction) => {
-        const category = categoryFor(transaction.categoryId);
-        return `<tr><td><span class="merchant-cell"><i class="category-dot" style="--category-color:${category?.color || '#768493'}"></i><strong>${escapeHtml(transaction.merchant)}</strong></span></td><td>${escapeHtml(category?.name || 'Archived')}</td><td>${formatDate(transaction.date)}, ${transaction.date.slice(0, 4)}</td><td class="description-cell">${escapeHtml(transaction.description || '—')}</td><td class="align-right amount-cell">${money(transaction.amount)}</td><td class="action-cell"><a class="icon-button table-action" href="expenses.html?edit=${encodeURIComponent(transaction.id)}#manual-entry" aria-label="Edit ${escapeHtml(transaction.merchant)}">✎</a><button class="icon-button table-action delete-transaction" type="button" data-delete-transaction="${escapeHtml(transaction.id)}" aria-label="Delete ${escapeHtml(transaction.merchant)}">×</button></td></tr>`;
+        const category = transaction.category;
+        const color = /^#[\da-f]{6}$/i.test(category?.color || '') ? category.color : '#768493';
+        return `<tr><td><span class="merchant-cell"><i class="category-dot" style="--category-color:${color}"></i><strong>${escapeHtml(transaction.merchant)}</strong></span></td><td>${escapeHtml(category?.name || 'Uncategorized')}</td><td>${formatDate(transaction.date)}, ${transaction.date.slice(0, 4)}</td><td class="description-cell">${escapeHtml(transaction.description || '—')}</td><td class="align-right amount-cell">${money(transaction.amount)}</td><td class="action-cell"><a class="icon-button table-action" href="expenses.html?edit=${encodeURIComponent(transaction.id)}#manual-entry" aria-label="Edit ${escapeHtml(transaction.merchant)}">✎</a><button class="icon-button table-action delete-transaction" type="button" data-delete-transaction="${escapeHtml(transaction.id)}" aria-label="Delete ${escapeHtml(transaction.merchant)}">×</button></td></tr>`;
       }).join('');
       document.getElementById('transactions-empty').classList.toggle('hidden', filtered.length > 0);
       document.querySelector('.table-panel .table-wrap').classList.toggle('hidden', filtered.length === 0);
     };
     [search, categoryFilter, monthFilter].forEach((control) => control.addEventListener('input', render));
-    body.addEventListener('click', (event) => {
+    body.addEventListener('click', async (event) => {
       const button = event.target.closest('[data-delete-transaction]');
       if (!button) return;
-      const transaction = state.transactions.find((item) => item.id === button.dataset.deleteTransaction);
+      const transaction = transactions.find((item) => String(item.id) === button.dataset.deleteTransaction);
       if (!transaction || !window.confirm(`Delete the ${transaction.merchant} transaction?`)) return;
-      state.transactions = state.transactions.filter((item) => item.id !== transaction.id);
-      saveState();
-      render();
-      toast('Transaction deleted. Budget totals have been recalculated.');
+      button.disabled = true;
+      try {
+        await apiRequest(`/api/transactions/${encodeURIComponent(transaction.id)}`, { method: 'DELETE' });
+        await loadTransactions();
+        toast('Transaction deleted.');
+      } catch (error) {
+        feedback.textContent = error.message;
+        button.disabled = false;
+      }
     });
-    render();
+
+    async function loadTransactions() {
+      feedback.textContent = 'Loading transactions…';
+      try {
+        const [data, categories] = await Promise.all([
+          apiRequest('/api/transactions'),
+          fetchApiCategories(),
+        ]);
+        transactions = data;
+        apiCategoryOptions(categoryFilter, [{ id: '', name: 'All categories' }, ...categories]);
+        body.innerHTML = '';
+        document.querySelector('.table-panel .table-wrap').classList.remove('hidden');
+        feedback.textContent = '';
+        render();
+        const params = new URLSearchParams(window.location.search);
+        if (params.has('created') || params.has('updated') || params.has('imported')) {
+          const message = params.has('created') ? 'Transaction added.' : params.has('updated') ? 'Transaction updated.' : `${params.get('imported')} transactions imported.`;
+          toast(message);
+          history.replaceState(null, '', window.location.pathname);
+        }
+      } catch (error) {
+        feedback.textContent = error.message || 'Transactions could not be loaded.';
+        document.querySelector('.table-panel .table-wrap').classList.add('hidden');
+        document.getElementById('transactions-empty').classList.add('hidden');
+      }
+    }
+
+    loadTransactions();
   }
 
   let categoryView = 'active';
+  let budgetRows = [];
+
+  function categoryBudget(categoryId) {
+    return budgetRows.find((row) => row.category_id === categoryId);
+  }
+
   function renderCategories() {
     const target = document.getElementById('category-list');
     if (!target) return;
-    const items = state.categories.filter((category) => category.archived === (categoryView === 'archived'));
+    const archived = categoryView === 'archived';
+    const items = state.categories.filter((category) => Boolean(category.is_archived) === archived);
     document.getElementById('category-count').textContent = `${items.length} ${categoryView} categor${items.length === 1 ? 'y' : 'ies'}`;
-    const totals = totalsByCategory(currentMonth());
     target.innerHTML = items.length ? items.map((category) => {
-      const spent = totals[category.id] || 0;
-      const percentage = category.budget > 0 ? Math.round(spent / category.budget * 100) : 0;
-      return `<article class="category-card"><div class="category-card-top"><span class="category-identity"><i class="category-swatch" style="--category-color:${category.color}"></i><strong>${escapeHtml(category.name)}</strong></span><div class="category-actions"><button class="icon-button table-action" type="button" data-edit-category="${escapeHtml(category.id)}" aria-label="Edit ${escapeHtml(category.name)}">✎</button><button class="button button-quiet button-small" type="button" data-toggle-category="${escapeHtml(category.id)}">${category.archived ? 'Reactivate' : 'Archive'}</button></div></div><div class="category-budget-line"><span>Monthly limit</span><strong>${money(category.budget)}</strong></div><div class="progress-track" role="progressbar" aria-label="${escapeHtml(category.name)} budget used" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.min(percentage, 100)}"><span class="progress-fill ${percentage >= 100 ? 'over' : percentage >= state.warningThreshold * 100 ? 'warning' : ''}" style="width:${Math.min(percentage, 100)}%;--category-color:${category.color}"></span></div><small class="category-spend-caption">${money(spent)} spent this month${category.archived ? ' · archived' : ` · ${percentage}% used`}</small></article>`;
-    }).join('') : `<div class="empty-state"><span class="empty-symbol">◷</span><strong>No ${categoryView} categories</strong><span>${categoryView === 'active' ? 'Create a category to start setting budget limits.' : 'Archived categories appear here and keep their transaction history.'}</span></div>`;
+      const budget = categoryBudget(category.id);
+      const spent = Number(budget?.spent || 0);
+      const budgetAmount = Number(budget?.budget_amount || 0);
+      const percentage = budget?.percentage === null || !budget ? null : Number(budget.percentage);
+      const fill = percentage === null ? (spent > 0 ? 100 : 0) : Math.min(100, percentage);
+      const status = budget?.status === 'exceeded' ? 'over' : budget?.status === 'warning' ? 'warning' : '';
+      const color = /^#[\da-f]{6}$/i.test(category.color || '') ? category.color : '#768493';
+      const budgetCaption = budget?.status === 'unbudgeted' ? 'No budget set' : `${percentage}% used`;
+      return `<article class="category-card"><div class="category-card-top"><span class="category-identity"><i class="category-swatch" style="--category-color:${color}"></i><strong>${escapeHtml(category.name)}</strong></span><div class="category-actions"><button class="icon-button table-action" type="button" data-edit-category="${category.id}" aria-label="Edit ${escapeHtml(category.name)}">✎</button><button class="button button-quiet button-small" type="button" data-toggle-category="${category.id}">${archived ? 'Reactivate' : 'Archive'}</button></div></div><div class="category-budget-line"><span>${escapeHtml(selectedBudgetMonth)} budget</span><strong>${money(budgetAmount)}</strong></div><div class="progress-track" role="progressbar" aria-label="${escapeHtml(category.name)} budget used" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${fill}"><span class="progress-fill ${status}" style="width:${fill}%;--category-color:${color}"></span></div><small class="category-spend-caption">${money(spent)} spent · ${budgetCaption}${archived ? ' · archived' : ''}</small></article>`;
+    }).join('') : `<div class="empty-state"><span class="empty-symbol">◷</span><strong>No ${categoryView} categories</strong><span>${archived ? 'Archived categories and their transaction history appear here.' : 'Create a category to organize transactions and budgets.'}</span></div>`;
+  }
+
+  async function loadCategories() {
+    const feedback = document.getElementById('categories-feedback');
+    feedback.textContent = 'Loading categories and budgets…';
+    try {
+      const [categories, budgets] = await Promise.all([
+        apiRequest('/api/categories?status=all'),
+        apiRequest(`/api/budgets?month=${encodeURIComponent(selectedBudgetMonth)}`),
+      ]);
+      state.categories = categories;
+      budgetRows = budgets;
+      renderCategories();
+      updateCategoryOptions();
+      feedback.textContent = '';
+    } catch (error) {
+      feedback.textContent = error.message || 'Categories could not be loaded.';
+    }
+  }
+
+  function resetCategoryForm() {
+    const form = document.getElementById('category-form');
+    form.reset();
+    document.getElementById('category-id').value = '';
+    document.getElementById('category-form-title').textContent = 'Create a category';
+    document.getElementById('save-category').textContent = 'Add category';
+    document.getElementById('cancel-category-edit').classList.add('hidden');
+    document.getElementById('category-error').textContent = '';
+    document.getElementById('warning-threshold').value = 80;
+    document.getElementById('threshold-value').value = '80%';
   }
 
   function initCategories() {
     const form = document.getElementById('category-form');
     if (!form) return;
-    renderCategories();
+    const monthInput = document.getElementById('budget-month');
+    monthInput.value = selectedBudgetMonth;
+    monthInput.addEventListener('change', () => {
+      if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(monthInput.value)) return;
+      selectedBudgetMonth = monthInput.value;
+      loadCategories();
+    });
+    loadCategories();
+
     document.querySelectorAll('[data-category-view]').forEach((button) => button.addEventListener('click', () => {
       categoryView = button.dataset.categoryView;
-      document.querySelectorAll('[data-category-view]').forEach((item) => { const active = item === button; item.classList.toggle('active', active); item.setAttribute('aria-pressed', String(active)); });
+      document.querySelectorAll('[data-category-view]').forEach((item) => {
+        const active = item === button;
+        item.classList.toggle('active', active);
+        item.setAttribute('aria-pressed', String(active));
+      });
       renderCategories();
     }));
-    form.addEventListener('submit', (event) => {
+
+    document.getElementById('warning-threshold').addEventListener('input', (event) => {
+      document.getElementById('threshold-value').value = `${event.target.value}%`;
+    });
+
+    form.addEventListener('submit', async (event) => {
       event.preventDefault();
       const id = document.getElementById('category-id').value;
       const name = document.getElementById('category-name').value.trim();
-      const budget = Number(document.getElementById('category-budget').value);
-      const error = document.getElementById('category-error');
-      const duplicate = state.categories.some((category) => category.name.toLowerCase() === name.toLowerCase() && category.id !== id);
-      if (!name || !Number.isFinite(budget) || budget <= 0) error.textContent = 'Enter a category name and a monthly budget greater than zero.';
-      else if (duplicate) error.textContent = 'A category with this name already exists.';
-      else {
-        if (id) state.categories = state.categories.map((category) => category.id === id ? { ...category, name, budget, color: document.getElementById('category-color').value } : category);
-        else state.categories.push({ id: `cat-${Date.now()}`, name, budget, color: document.getElementById('category-color').value, archived: false });
-        saveState();
-        form.reset();
-        document.getElementById('category-id').value = '';
-        document.getElementById('category-form-title').textContent = 'Create a category';
-        document.getElementById('save-category').textContent = 'Add category';
-        document.getElementById('cancel-category-edit').classList.add('hidden');
-        error.textContent = '';
-        renderCategories();
-        updateCategoryOptions();
-        renderDashboard();
-        toast(id ? 'Category updated.' : 'Category created.');
+      const budgetAmount = document.getElementById('category-budget').value.trim();
+      const categoryError = document.getElementById('category-error');
+      const saveButton = document.getElementById('save-category');
+      if (!name || budgetAmount === '') {
+        categoryError.textContent = 'Enter a category name and a budget amount for the selected month.';
+        return;
+      }
+      saveButton.disabled = true;
+      categoryError.textContent = '';
+      const categoryPayload = {
+        name,
+        color: document.getElementById('category-color').value,
+        warning_threshold: Number(document.getElementById('warning-threshold').value),
+      };
+      try {
+        const category = await apiRequest(id ? `/api/categories/${encodeURIComponent(id)}` : '/api/categories', {
+          method: id ? 'PATCH' : 'POST',
+          body: JSON.stringify(categoryPayload),
+        });
+        if (!id) {
+          document.getElementById('category-id').value = category.id;
+          document.getElementById('category-form-title').textContent = 'Finish category budget';
+          document.getElementById('save-category').textContent = 'Save monthly budget';
+          document.getElementById('cancel-category-edit').classList.remove('hidden');
+          await loadCategories();
+        }
+        const [year, month] = selectedBudgetMonth.split('-').map(Number);
+        const existingBudget = budgetRows.find((item) => item.category_id === category.id);
+        if (existingBudget) {
+          await apiRequest(`/api/budgets/${existingBudget.budget_id}`, {
+            method: 'PATCH',
+            body: JSON.stringify({ budget_amount: budgetAmount }),
+          });
+        } else {
+          await apiRequest('/api/budgets', {
+            method: 'POST',
+            body: JSON.stringify({ category_id: category.id, year, month, budget_amount: budgetAmount }),
+          });
+        }
+        await loadCategories();
+        toast(id ? 'Category and budget updated.' : 'Category created with a monthly budget.');
+        resetCategoryForm();
+      } catch (error) {
+        categoryError.textContent = Object.values(error.fields || {}).join(' ') || error.message;
+      } finally {
+        saveButton.disabled = false;
       }
     });
-    document.getElementById('cancel-category-edit').addEventListener('click', () => {
-      form.reset(); document.getElementById('category-id').value = ''; document.getElementById('category-form-title').textContent = 'Create a category'; document.getElementById('save-category').textContent = 'Add category'; document.getElementById('cancel-category-edit').classList.add('hidden'); document.getElementById('category-error').textContent = '';
-    });
-    document.getElementById('warning-threshold').value = Math.round(state.warningThreshold * 100);
-    document.getElementById('threshold-value').value = `${Math.round(state.warningThreshold * 100)}%`;
-    document.getElementById('warning-threshold').addEventListener('input', (event) => {
-      state.warningThreshold = Number(event.target.value) / 100;
-      document.getElementById('threshold-value').value = `${event.target.value}%`;
-      saveState(); renderCategories(); renderDashboard();
-    });
-    document.getElementById('category-list').addEventListener('click', (event) => {
+
+    document.getElementById('cancel-category-edit').addEventListener('click', resetCategoryForm);
+    document.getElementById('category-list').addEventListener('click', async (event) => {
       const edit = event.target.closest('[data-edit-category]');
       const toggle = event.target.closest('[data-toggle-category]');
       if (edit) {
-        const category = state.categories.find((item) => item.id === edit.dataset.editCategory);
+        const category = state.categories.find((item) => item.id === Number(edit.dataset.editCategory));
         if (!category) return;
+        const budget = categoryBudget(category.id);
         document.getElementById('category-id').value = category.id;
         document.getElementById('category-name').value = category.name;
-        document.getElementById('category-budget').value = category.budget;
-        document.getElementById('category-color').value = category.color;
+        document.getElementById('category-budget').value = budget?.budget_amount ?? '0.00';
+        document.getElementById('category-color').value = category.color || '#768493';
+        document.getElementById('warning-threshold').value = category.warning_threshold;
+        document.getElementById('threshold-value').value = `${category.warning_threshold}%`;
         document.getElementById('category-form-title').textContent = 'Edit category';
         document.getElementById('save-category').textContent = 'Save changes';
         document.getElementById('cancel-category-edit').classList.remove('hidden');
         document.getElementById('category-name').focus();
       }
       if (toggle) {
-        const category = state.categories.find((item) => item.id === toggle.dataset.toggleCategory);
-        if (!category) return;
-        category.archived = !category.archived;
-        saveState(); renderCategories(); updateCategoryOptions(); renderDashboard();
-        toast(category.archived ? `${category.name} archived. Past transactions are preserved.` : `${category.name} reactivated.`);
+        const category = state.categories.find((item) => item.id === Number(toggle.dataset.toggleCategory));
+        if (!category || toggle.disabled) return;
+        toggle.disabled = true;
+        try {
+          await apiRequest(`/api/categories/${category.id}`, {
+            method: 'PATCH',
+            body: JSON.stringify({ is_archived: !category.is_archived }),
+          });
+          await loadCategories();
+          toast(category.is_archived ? 'Category reactivated.' : 'Category archived; history is preserved.');
+        } catch (error) {
+          document.getElementById('categories-feedback').textContent = error.message;
+          toggle.disabled = false;
+        }
       }
     });
   }
