@@ -13,22 +13,22 @@
     <section class="auth-aside" aria-label="SpendWise introduction">
       <a class="brand brand-light" href="login.html"><span class="brand-mark" aria-hidden="true">S</span><span>spendwise<span class="brand-period">.</span></span></a>
       <div class="auth-aside-copy"><span class="eyebrow">Make room for better habits</span><h1>Your money,<br>in perspective.</h1><p>Build a thoughtful picture of where your money goes, one transaction at a time.</p></div>
-      <p class="aside-footnote">A personal finance project demo</p>
+      <p class="aside-footnote">Personal account access</p>
     </section>
     <section class="auth-main">
       <div class="auth-card auth-card-register">
         <div class="auth-mobile-brand"><a class="brand" href="login.html"><span class="brand-mark" aria-hidden="true">S</span><span>spendwise<span class="brand-period">.</span></span></a></div>
-        <span class="eyebrow">GET STARTED</span><h2>Create your account</h2><p class="muted auth-intro">Set up a local profile for this frontend demonstration.</p>
-        <div class="notice notice-info" role="note"><strong>Frontend demo</strong><span>Registration does not create an account or send data to a server.</span></div>
-        <form id="register-form" class="form-stack" novalidate>
-          <label for="register-name">Your name</label><input id="register-name" name="name" autocomplete="name" placeholder="Alex Morgan" required minlength="2">
+        <span class="eyebrow">GET STARTED</span><h2>Create your account</h2><p class="muted auth-intro">Create a SpendWise account with an email and password.</p>
+        <div class="notice notice-info" role="note"><strong>Password requirements</strong><span>Use 12 to 128 characters.</span></div>
+        <form id="register-form" class="form-stack" method="post" action="{{ url_for('register') }}" novalidate>
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <label for="register-email">Email address</label><input id="register-email" name="email" type="email" autocomplete="email" placeholder="you@example.com" required>
-          <label for="register-password">Password</label><div class="password-wrap"><input id="register-password" name="password" type="password" autocomplete="new-password" placeholder="At least 6 characters" required minlength="6"><button class="visibility-toggle" type="button" data-toggle-password="register-password" aria-label="Show password">Show</button></div>
-          <label for="register-confirm">Confirm password</label><div class="password-wrap"><input id="register-confirm" name="confirm" type="password" autocomplete="new-password" placeholder="Re-enter your password" required minlength="6"><button class="visibility-toggle" type="button" data-toggle-password="register-confirm" aria-label="Show password">Show</button></div>
-          <p class="form-error" id="register-error" role="alert" aria-live="polite"></p>
-          <button class="button button-primary button-wide" type="submit">Continue to demo <span aria-hidden="true">→</span></button>
+          <label for="register-password">Password</label><div class="password-wrap"><input id="register-password" name="password" type="password" autocomplete="new-password" placeholder="At least 12 characters" required minlength="12" maxlength="128"><button class="visibility-toggle" type="button" data-toggle-password="register-password" aria-label="Show password">Show</button></div>
+          <label for="register-confirm">Confirm password</label><div class="password-wrap"><input id="register-confirm" name="confirm" type="password" autocomplete="new-password" placeholder="Re-enter your password" required minlength="12" maxlength="128"><button class="visibility-toggle" type="button" data-toggle-password="register-confirm" aria-label="Show password">Show</button></div>
+          <p class="form-error" id="register-error" role="alert" aria-live="polite">{{ error or '' }}</p>
+          <button class="button button-primary button-wide" type="submit">Create account <span aria-hidden="true">→</span></button>
         </form>
-        <p class="auth-switch">Already have an account? <a href="login.html">Sign in</a></p><p class="auth-legal">Demo only · Data stays in this browser</p>
+        <p class="auth-switch">Already have an account? <a href="login.html">Sign in</a></p><p class="auth-legal">Sessions expire when you close this browser or after 30 minutes</p>
       </div>
     </section>
   </main>
